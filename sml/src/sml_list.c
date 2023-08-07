@@ -122,7 +122,9 @@ sml_list *sml_list_entry_parse(sml_buffer *buf, struct workarounds *workarounds)
 	// this is "1 DZG 00 60000000" in the hex encoding, see comment below
 	static const unsigned char dzg_serial_fixed[] =
 		{0x0a, 0x01, 'D', 'Z', 'G', 0x00, 0x03, 0x93, 0x87, 0x00};
-	static const unsigned char dzg_power_name[] = {1, 0, 16, 7, 0, 255};
+	// there are two possible  messages in which the DZG meter sends wrong values, maybe even more
+	static const unsigned char dzg_power_name_sum[] = {1, 0, 16, 7, 0, 255};
+	static const unsigned char dzg_power_name_L1[] = {1, 0, 36, 7, 0, 255};
 	u8 value_tl, value_len_more;
 	sml_list *l = NULL;
 
@@ -205,8 +207,14 @@ sml_list *sml_list_entry_parse(sml_buffer *buf, struct workarounds *workarounds)
 		memcmp(l->value->data.bytes->str, dzg_serial_fixed, sizeof(dzg_serial_fixed)) < 0) {
 		workarounds->old_dzg_meter = 1;
 	} else if (workarounds->old_dzg_meter && l->obj_name &&
-			   l->obj_name->len == sizeof(dzg_power_name) &&
-			   memcmp(l->obj_name->str, dzg_power_name, sizeof(dzg_power_name)) == 0 && l->value &&
+			   l->obj_name->len == sizeof(dzg_power_name_sum) &&
+			   memcmp(l->obj_name->str, dzg_power_name_sum, sizeof(dzg_power_name_sum)) == 0 && l->value &&
+			   (value_len_more == 1 || value_len_more == 2 || value_len_more == 3)) {
+		l->value->type &= ~SML_TYPE_FIELD;
+		l->value->type |= SML_TYPE_UNSIGNED;
+	} else if (workarounds->old_dzg_meter && l->obj_name &&
+			   l->obj_name->len == sizeof(dzg_power_name_L1) &&
+			   memcmp(l->obj_name->str, dzg_power_name_L1, sizeof(dzg_power_name_L1)) == 0 && l->value &&
 			   (value_len_more == 1 || value_len_more == 2 || value_len_more == 3)) {
 		l->value->type &= ~SML_TYPE_FIELD;
 		l->value->type |= SML_TYPE_UNSIGNED;
