@@ -22,14 +22,14 @@
 TEST_GROUP(sml_buffer);
 
 int buffer_len = 512;
-sml_buffer *buf;
+static sml_buffer *buf;
 
 TEST_SETUP(sml_buffer) {
 	buf = sml_buffer_init(buffer_len);
 }
 
 TEST_TEAR_DOWN(sml_buffer) {
-
+	sml_buffer_free( buf );
 }
 
 TEST(sml_buffer, init_defaults) {

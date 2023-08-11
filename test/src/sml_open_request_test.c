@@ -22,7 +22,7 @@
 
 TEST_GROUP(sml_open_request);
 
-sml_buffer *buf;
+static sml_buffer *buf;
 
 TEST_SETUP(sml_open_request) {
 	buf = sml_buffer_init(512);
@@ -35,6 +35,7 @@ TEST_TEAR_DOWN(sml_open_request) {
 TEST(sml_open_request, init) {
 	sml_open_request *m = sml_open_request_init();
 	TEST_ASSERT_NOT_NULL(m);
+	sml_open_request_free( m );
 }
 
 TEST_GROUP_RUNNER(sml_open_request) {

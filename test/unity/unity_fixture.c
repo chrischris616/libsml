@@ -5,9 +5,9 @@
     [Released under MIT License. Please refer to license.txt for details]
 ========================================== */
 
+#include <string.h>
 #include "unity_fixture.h"
 #include "unity_internals.h"
-#include <string.h>
 
 UNITY_FIXTURE_T UnityFixture;
 
@@ -19,7 +19,7 @@ int verbose = 0;
 void setUp(void)    { /*does nothing*/ }
 void tearDown(void) { /*does nothing*/ }
 
-void announceTestRun(int runNumber)
+void announceTestRun(unsigned int runNumber)
 {
     UnityPrint("Unity test run ");
     UnityPrintNumber(runNumber+1);
@@ -31,14 +31,14 @@ void announceTestRun(int runNumber)
 int UnityMain(int argc, char* argv[], void (*runAllTests)())
 {
     int result = UnityGetCommandLineOptions(argc, argv);
-    int r;
+    unsigned int r;
     if (result != 0)
         return result;
 
     for (r = 0; r < UnityFixture.RepeatCount; r++)
     {
         announceTestRun(r);
-        UnityBegin();
+        UnityBegin("");
         runAllTests();
         UNITY_OUTPUT_CHAR('\n');
         UnityEnd();
@@ -107,13 +107,20 @@ void UnityTestRunner(unityfunction* setup,
             UnityPointer_UndoAllSets();
             if (!Unity.CurrentTestFailed)
                 UnityMalloc_EndTest();
-            UnityConcludeFixtureTest();
         }
-        else
-        {
-            //aborting - jwg - di i need these for the other TEST_PROTECTS?
-        }
+        UnityConcludeFixtureTest();
     }
+}
+
+void UnityIgnoreTest(const char * printableName)
+{
+    Unity.NumberOfTests++;
+    Unity.CurrentTestIgnored = 1;
+    if (!UnityFixture.Verbose)
+        UNITY_OUTPUT_CHAR('!');
+    else
+        UnityPrint(printableName);
+    UnityConcludeFixtureTest();
 }
 
 
@@ -157,8 +164,8 @@ void UnityMalloc_MakeMallocFailAfterCount(int countdown)
 
 typedef struct GuardBytes
 {
-    int size;
-    char guard[sizeof(int)];
+    size_t size;
+    char guard[sizeof(size_t)];
 } Guard;
 
 
@@ -172,7 +179,7 @@ void * unity_malloc(size_t size)
     if (malloc_fail_countdown != MALLOC_DONT_FAIL)
     {
         if (malloc_fail_countdown == 0)
-            return 0;
+            return NULL;
         malloc_fail_countdown--;
     }
 
@@ -240,14 +247,14 @@ void* unity_realloc(void * oldMem, size_t size)
     if (size == 0)
     {
         release_memory(oldMem);
-        return 0;
+        return NULL;
     }
 
     if (guard->size >= size)
         return oldMem;
 
     newMem = unity_malloc(size);
-    memcpy(newMem, oldMem, size);
+    memcpy(newMem, oldMem, guard->size);
     unity_free(oldMem);
     return newMem;
 }
@@ -353,6 +360,10 @@ void UnityConcludeFixtureTest()
 {
     if (Unity.CurrentTestIgnored)
     {
+        if (UnityFixture.Verbose)
+        {
+            UNITY_OUTPUT_CHAR('\n');
+        }
         Unity.TestIgnores++;
     }
     else if (!Unity.CurrentTestFailed)
